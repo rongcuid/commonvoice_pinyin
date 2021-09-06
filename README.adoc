@@ -1,0 +1,98 @@
+= 为PyTorch准备的Common Voice中文TTS拼音语音数据集
+
+本数据集基于Mozilla的Common Voice中文语音数据集，包含基于pypinyin的拼音转换和基于规则的拼音编码。
+
+== 使用方法
+
+默认import时，导入的是未经缓存的数据集：
+
+[source, python]
+....
+import commonvoice_pinyin as cp
+
+# 使用data/下面的训练集
+dataset = cp.CommonVoiceDataset("data", "train.tsv")
+....
+
+以下方式可以无缝切换成经过`diskcache`缓存的数据集：
+
+[source, python]
+....
+import commonvoice_pinyin.common_voice_cached as cp
+....
+
+导入缓存版时会创建当前目录下的缓存文件夹``./cache``，并且根据码率、频段等设置不同会产生7-150GB的数据。在SSD上缓存后的数据集加载速度可以加快3-5倍。
+
+在使用本库进行机器学习任务之前，建议运行``commonvoice_pinyin.stats``模块对数据集进行统计并确保数据集没有错误：
+
+....
+$ python -m commonvoice_pinyin.stats data/
+....
+
+== 数据结构
+
+``CommonVoiceDataset``返回的是``CommonVoiceEntry``数据结构，而如果文字中包含无法处理的字符则会返回``None``：
+
+[source, python]
+....
+class CommonVoiceEntry(NamedTuple):
+    speaker_id: torch.Tensor
+    mel: torch.Tensor
+    specgram: torch.Tensor
+    phoneme: torch.Tensor
+    length: int
+    frames: int
+....
+
+``speaker_id``是长度64，范围``[0.0, 1.0]``的特征。此特征直接取自Common Voice发言人编号的64字节哈希值除以255得到（未来版本可能会直接使用原数值而并非范围映射后的数值）。
+
+``mel``和``specgram``是log-power的频谱（并非dB）。如果想要转换为可以用于Griffin-Lim的频谱，请使用`torch.exp`函数。注意，频谱图转换为对数功率之前与``eps=1e-9``相加，这是为了避免产生负无穷。
+
+``phoneme``是通过``commonvoice_pinyin.pinyin.PinyinInput``转换后的拼音编码。
+
+``length``是句子音素长度，可用于训练时的padding等。``frames``则是频谱图的帧数，可用于同样的目的。
+
+
+相对应的``CommonVoiceRawDataset``则会返回``CommonVoiceRaw``结构：
+
+[source, py]
+....
+class CommonVoiceRaw(NamedTuple):
+    speaker_id: str
+    waveform: torch.Tensor
+    sample_rate: int
+    sentence: str
+....
+
+
+== 拼音编码
+
+此库为TTS训练所作，因此采用基于规则的拼音编码，而非基于语义的编码方式。在进行拼音编码前，输入字符会首先被Unicode规整化为``NFKC``子集，然后通过``Pinyin``类预处理并生成可用于机器学习的编码。
+
+此编码可能在后续版本中为增加适应性或者缩减无效信息而改变，也可能被分离成单独的库。本文档记载1.0版本的编码方式。为了适应可能的版本更新，请使用``Pinyin.dim``或者``Pinyin.shape``来确定特征矢量的长度和形状。
+
+拼音编码为以下几类one-hot编码而成，可以看作以下的数据类型：
+
+....
+Pinyin = Punctuation
+       | Alphabet
+       | Pinyin Consonant Retroflex Vowel1 Er Vowel2 Vowel3 Nasal Tone
+....
+
+标点符号（Punctuation）::
+* 如果一个音素是标点符号，它不可能是任何其他种类
+* 标点符号包含所有英文标点与大部分常用与非常用中文标点。非常可能在后续版本改变
+
+英文字母（Alphabet）::
+* 如果一个音素是英文字母，它不可能是任何其他种类
+
+拼音::
+* 拼音由辅音，卷舌音，元音，儿化音，鼻音，和音调组成
+* 辅音在大部分情况下必须存在，除了半元音y和w
+* 辅音z,c,s可以附带卷舌音
+* 第一元音必须存在
+* 第一元音为e时，可以附带儿化音
+* 一、二、三元音组合成复元音
+* 鼻音包括-n，-ng
+* 音调的12345分别对应第一、二、三、四声以及轻声
+* 此编码可以表达所有标准拼音，但是它也能表达出一些不存在的拼音

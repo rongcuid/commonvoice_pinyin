@@ -25,6 +25,7 @@ class PinyinInput:
         lengths = []
         phonemes = []
         for b, s in enumerate(sentences):
+            s = unicodedata.normalize("NFKC", s)
             # Convert using pypinyin
             pinyins = pinyin(s, Style.TONE3)
             pys = []
@@ -82,7 +83,6 @@ class Pinyin:
     shape = (dim,)
 
     def __init__(self, pinyin: str, validate=True):
-        pinyin = unicodedata.normalize("NFKC", pinyin)
         assert unicodedata.is_normalized("NFKC", pinyin)
         self.punct = None
         self.consonant = None
