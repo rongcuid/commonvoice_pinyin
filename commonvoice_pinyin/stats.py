@@ -12,13 +12,14 @@ def stat(dl, name):
     total = len(dl)
     perc = total // 100
     dec = total // 10
-    print(", = 1%; . = 10%; ! = bad sample")
+    print(f"{name} contains {total} samples")
+    print(". = 1%; | = 10%; ! = bad sample")
     bad_samples = 0
     for i, d in enumerate(dl):
         if (i+1) % dec == 0:
-            print(".", end="", flush=True)
+            print("|", flush=True)
         elif (i+1) % perc == 0:
-            print(",", end="", flush=True)
+            print(".", end="", flush=True)
         if d is None:
             bad_samples += 1
             print("!", end="", flush=True)
@@ -28,6 +29,7 @@ def stat(dl, name):
         frames = d.specgram.size(-1)
         max_mel_frames = max(frames_mel, max_mel_frames)
         max_sg_frames = max(frames, max_sg_frames)
+    print()
     print(f"{name} dataset max sentence length: {max_chars}")
     print(f"{name} dataset max frames: {max_mel_frames} == {max_sg_frames}")
     print(f"{name} had {bad_samples} invalid entries")
