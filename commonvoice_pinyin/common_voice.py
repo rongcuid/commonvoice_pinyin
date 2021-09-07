@@ -151,7 +151,7 @@ class CommonVoiceDataset(Dataset):
         mel = torch.log(self.mel(downsampled) + 1e-9).detach()
         entry = CommonVoiceEntry(
             speaker_id=torch.tensor(bytearray.fromhex(
-                raw.speaker_id)).float() / 255.,
+                raw.speaker_id)),
             mel=mel,
             specgram=torch.log(self.spec(downsampled) + 1e-9).detach(),
             phoneme=torch.from_numpy(phoneme),
