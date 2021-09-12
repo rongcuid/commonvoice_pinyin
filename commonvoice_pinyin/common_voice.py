@@ -165,4 +165,4 @@ class CommonVoiceDataset(Dataset):
     
     @staticmethod
     def collate_fn(batch):
-        return default_collate([b for b in batch if b is not None])
+        return [b for b in batch if b is not None]
