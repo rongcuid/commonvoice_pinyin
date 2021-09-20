@@ -2,6 +2,11 @@
 
 本数据集基于Mozilla的Common Voice中文语音数据集，包含基于pypinyin的拼音转换和基于规则的拼音编码。
 
+== 从1.0到1.1的API变化
+
+* 发言人编号特征向量使用0-255范围的的整数（取自哈希值）
+* 修复`CommonVoiceDataset::collate_fn`用于合并批次
+
 == 使用方法
 
 默认import时，导入的是未经缓存的数据集：
@@ -44,9 +49,11 @@ class CommonVoiceEntry(NamedTuple):
     frames: int
 ....
 
-``speaker_id``是长度64，范围``[0.0, 1.0]``的特征。此特征直接取自Common Voice发言人编号的64字节哈希值除以255得到（未来版本可能会直接使用原数值而并非范围映射后的数值）。
+``speaker_id``是长度64，范围``[0, 255]``的特征。此特征直接取自Common Voice发言人编号的64字节哈希值。
 
-``mel``和``specgram``是log-power的频谱（并非dB）。如果想要转换为可以用于Griffin-Lim的频谱，请使用`torch.exp`函数。注意，频谱图转换为对数功率之前与``eps=1e-9``相加，这是为了避免产生负无穷。
+``mel``和``specgram``是对数能量的频谱（注意：并非dB，而是自然对数）。如果想要转换为可以用于Griffin-Lim的频谱，请使用`torch.exp`函数。注意，频谱图转换为对数功率之前与``eps=1e-9``相加，这是为了避免产生负无穷。
+
+NOTE: 未来版本可能会改成dB的能量频谱。
 
 ``phoneme``是通过``commonvoice_pinyin.pinyin.PinyinInput``转换后的拼音编码。
 
@@ -63,6 +70,8 @@ class CommonVoiceRaw(NamedTuple):
     sample_rate: int
     sentence: str
 ....
+
+``CommonVoiceDataset::collate_fn``可以用来合成批次。此函数会忽略所有``None``输出。
 
 
 == 拼音编码
