@@ -134,7 +134,7 @@ class CommonVoiceDataset(Dataset):
     def __getitem__(self, idx) -> Optional[CommonVoiceEntry]:
         raw = self.raw_ds[idx]
         trimmed, idx = librosa.effects.trim(raw.waveform.squeeze(0),
-                                            top_db=50, frame_length=256, hop_length=64)
+                                            top_db=40, frame_length=256, hop_length=64)
         trimmed = trimmed.unsqueeze(0)
         wav_min = trimmed.min(1).values
         wav_max = trimmed.max(1).values
